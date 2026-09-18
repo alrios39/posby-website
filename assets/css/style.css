@@ -497,6 +497,13 @@ section {
   color: var(--accent-light);
 }
 
+.token-verify {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 16px;
+  line-height: 1.5;
+}
+
 /* ---- FOOTER ---- */
 footer {
   border-top: 1px solid var(--border);
