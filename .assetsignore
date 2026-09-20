@@ -2,3 +2,7 @@
 .wrangler/
 wrangler.toml
 .assetsignore
+.backups/
+game/index.v1.html
+game/index.v1.pre-share.html
+.gitignore

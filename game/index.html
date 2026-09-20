@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>DON'T MOVE POSBY</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      color: #e8e8e8;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      height: 100dvh;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    #game {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    /* HUD */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(10,10,10,0.9) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .hud-left, .hud-right {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .hud-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #555;
+    }
+
+    .hud-value {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #composure-value { color: #c4a882; }
+    #calm-value { color: #888; }
+
+    .calm-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: #222;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    #calm-bar {
+      height: 100%;
+      width: 100%;
+      background: #c4a882;
+      border-radius: 2px;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+
+    /* STREAK */
+    #streak-display {
+      font-size: 14px;
+      font-weight: 700;
+      color: #666;
+      transition: color 0.3s, transform 0.3s;
+    }
+
+    #streak-display.milestone {
+      color: #c4a882;
+      transform: scale(1.3);
+    }
+
+    /* POSBY */
+    #posby-wrap {
+      position: absolute;
+      bottom: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    #posby-img {
+      width: 160px;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0 4px 24px rgba(0,0,0,0.6));
+    }
+
+    @media (max-width: 640px) {
+      #posby-img { width: 120px; }
+      #hud { padding: 8px 12px; }
+      .hud-value { font-size: 16px; }
+    }
+
+    /* SITUATIONS */
+    .situation {
+      position: absolute;
+      z-index: 8;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    .situation.fake {
+      background: rgba(20, 20, 20, 0.9);
+      border: 1px solid #333;
+      color: #ccc;
+    }
+
+    .situation.real {
+      background: rgba(60, 15, 15, 0.95);
+      border: 1px solid #a33;
+      color: #f88;
+      box-shadow: 0 0 20px rgba(200, 50, 50, 0.3);
+      animation: fadeIn 0.3s ease forwards, pulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(200, 50, 50, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(200, 50, 50, 0.6); }
+    }
+
+    /* FEEDBACK */
+    .feedback {
+      position: absolute;
+      z-index: 20;
+      font-size: 18px;
+      font-weight: 700;
+      pointer-events: none;
+      animation: floatUp 1s ease forwards;
+    }
+
+    .feedback.good { color: #8c8; }
+    .feedback.bad { color: #c88; }
+
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-60px); }
+    }
+
+    /* SCREENS */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      background: rgba(10, 10, 10, 0.95);
+      text-align: center;
+      padding: 24px;
+    }
+
+    .screen h1 {
+      font-size: clamp(28px, 7vw, 48px);
+      font-weight: 800;
+      color: #c4a882;
+      margin-bottom: 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .screen h2 {
+      font-size: clamp(20px, 4vw, 32px);
+      font-weight: 700;
+      color: #c4a882;
+      margin-bottom: 16px;
+    }
+
+    .screen p {
+      font-size: 15px;
+      color: #888;
+      line-height: 1.7;
+      max-width: 400px;
+      margin-bottom: 24px;
+    }
+
+    .screen .subtitle {
+      font-size: 13px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 24px;
+    }
+
+    .stat-row {
+      display: flex;
+      gap: 32px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #c4a882;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .game-over-line {
+      font-size: 16px;
+      color: #666;
+      font-style: italic;
+      margin-bottom: 12px;
+    }
+
+    .mistakes-line {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 14px 40px;
+      border: 1px solid #c4a882;
+      border-radius: 24px;
+      color: #c4a882;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: inherit;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: 0.08em;
+    }
+
+    .btn:hover, .btn:active {
+      background: #c4a882;
+      color: #0a0a0a;
+    }
+
+    .btn-x {
+      display: inline-block;
+      padding: 14px 40px;
+      border: 1px solid #fff;
+      border-radius: 24px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: inherit;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: 0.08em;
+    }
+
+    .btn-x:hover, .btn-x:active {
+      background: #fff;
+      color: #0a0a0a;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .hidden { display: none !important; }
+
+    .posby-small {
+      width: 100px;
+      height: auto;
+      margin-bottom: 24px;
+      filter: drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+    }
+
+    .how-to {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.8;
+      max-width: 340px;
+      margin-bottom: 32px;
+    }
+
+    .how-to strong {
+      color: #c4a882;
+      font-weight: 600;
+    }
+
+    .back-link {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-size: 13px;
+      color: #555;
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+      z-index: 60;
+    }
+
+    .back-link:hover { color: #c4a882; }
+
+    .rule-normal {
+      color: #ccc;
+      font-weight: 700;
+    }
+
+    .rule-red {
+      color: #f88;
+      font-weight: 700;
+    }
+
+    /* TEACHING MESSAGES */
+    .teach-msg {
+      position: absolute;
+      z-index: 30;
+      left: 50%;
+      top: 20%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 20, 0.95);
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #c4a882;
+      text-align: center;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: teachIn 0.4s ease forwards;
+    }
+
+    .teach-msg.red-msg {
+      border-color: #a33;
+      color: #f88;
+      animation: teachIn 0.4s ease forwards, pulse 0.8s ease-in-out infinite;
+    }
+
+    @keyframes teachIn {
+      0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* STREAK POPUP */
+    .streak-popup {
+      position: absolute;
+      z-index: 25;
+      left: 50%;
+      top: 40%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      font-weight: 800;
+      color: #c4a882;
+      pointer-events: none;
+      animation: streakPop 1.2s ease forwards;
+      text-shadow: 0 0 20px rgba(196, 168, 130, 0.5);
+    }
+
+    @keyframes streakPop {
+      0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+      30% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+      60% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-40px); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="game">
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-left">
+      <span class="hud-label">Composure</span>
+      <span class="hud-value" id="composure-value">0</span>
+    </div>
+    <div class="hud-center">
+      <span class="hud-label">Unbothered</span>
+      <span id="streak-display">×0</span>
+    </div>
+    <div class="hud-right">
+      <span class="hud-label">Calm</span>
+      <span class="hud-value" id="calm-value">100%</span>
+      <div class="calm-bar-wrap"><div id="calm-bar"></div></div>
+    </div>
+  </div>
+
+  <!-- POSBY -->
+  <div id="posby-wrap" class="hidden">
+    <img src="../assets/images/posby-master.png" alt="Posby" id="posby-img">
+  </div>
+
+  <!-- INSTRUCTION SCREEN -->
+  <div class="screen" id="start-screen">
+    <a href="/" class="back-link">posby.world</a>
+    <img src="../assets/images/posby-master.png" alt="Posby" class="posby-small">
+    <h1>BE POSBY.</h1>
+    <p class="subtitle">Most problems don't deserve a reaction.</p>
+    <div class="how-to">
+      <span class="rule-normal">NORMAL</span> → DO NOTHING<br>
+      <span class="rule-red">RED</span> → CLICK / TAP IT<br><br>
+      Keep your CALM.<br>Build your COMPOSURE.
+    </div>
+    <button class="btn" id="start-btn">START</button>
+  </div>
+
+  <!-- GAME OVER SCREEN -->
+  <div class="screen hidden" id="gameover-screen">
+    <a href="/" class="back-link">posby.world</a>
+    <img src="../assets/images/posby-master.png" alt="Posby" class="posby-small">
+    <h2>GAME OVER</h2>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-label">Composure</div>
+        <div class="stat-value" id="final-composure">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Best</div>
+        <div class="stat-value" id="best-composure">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Survived</div>
+        <div class="stat-value" id="survival-time">0s</div>
+      </div>
+    </div>
+    <p class="mistakes-line" id="mistakes-line"></p>
+    <p class="game-over-line" id="gameover-line">Life happened. You stood there.</p>
+    <div class="btn-row">
+      <button class="btn" id="restart-btn">AGAIN</button>
+      <button class="btn-x" id="share-btn">SHARE ON X</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ELEMENTS
+  const game = document.getElementById('game');
+  const hud = document.getElementById('hud');
+  const posbyWrap = document.getElementById('posby-wrap');
+  const composureEl = document.getElementById('composure-value');
+  const calmEl = document.getElementById('calm-value');
+  const calmBar = document.getElementById('calm-bar');
+  const streakDisplay = document.getElementById('streak-display');
+  const startScreen = document.getElementById('start-screen');
+  const gameoverScreen = document.getElementById('gameover-screen');
+  const startBtn = document.getElementById('start-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const finalComposure = document.getElementById('final-composure');
+  const bestComposure = document.getElementById('best-composure');
+  const survivalTime = document.getElementById('survival-time');
+  const mistakesLine = document.getElementById('mistakes-line');
+  const gameoverLine = document.getElementById('gameover-line');
+  const shareBtn = document.getElementById('share-btn');
+
+  // GAME STATE
+  let composure = 0;
+  let calm = 100;
+  let running = false;
+  let startTime = 0;
+  let elapsed = 0;
+  let spawnTimer = 0;
+  let situations = [];
+  let animFrame = null;
+  let lastTime = 0;
+
+  // V1 POLISH STATE
+  let streak = 0;
+  let mistakes = 0;   // unnecessary reactions (tapped fake or empty space)
+  let panics = 0;     // missed real situations (red reached Posby)
+  let bestStreak = 0;
+
+  // FIRST-GAME TEACHING
+  let isFirstGame = !localStorage.getItem('posby_played');
+  let taughtFake = false;
+  let taughtReal = false;
+
+  // SITUATIONS
+  const FAKE_SITUATIONS = [
+    { text: 'WE NEED TO TALK', emoji: '💬' },
+    { text: 'Your package has been delayed', emoji: '📦' },
+    { text: 'SERVER DOWN', emoji: '🖥️' },
+    { text: 'Phone ringing...', emoji: '📱' },
+    { text: 'Favorite team losing 47-3', emoji: '🏈' },
+    { text: 'Boss: "Quick call?"', emoji: '👔' },
+    { text: '3 new emails from HR', emoji: '📧' },
+    { text: 'Meeting could have been an email', emoji: '📋' },
+    { text: 'Someone ate your lunch', emoji: '🥪' },
+    { text: 'WiFi disconnected', emoji: '📶' },
+    { text: 'Printer jammed again', emoji: '🖨️' },
+    { text: 'Your Uber is 15 min away', emoji: '🚗' },
+    { text: 'Someone replied-all', emoji: '📨' },
+    { text: 'Coffee machine broken', emoji: '☕' },
+    { text: 'Monday morning, 6:47 AM', emoji: '⏰' },
+    { text: 'DoorDash order wrong', emoji: '🥡' },
+    { text: 'Spotify ad in the middle of a vibe', emoji: '🎵' },
+    { text: 'Low battery warning', emoji: '🔋' },
+    { text: 'Group chat has 47 unread messages', emoji: '💬' },
+    { text: 'Someone stole your parking spot', emoji: '🅿️' },
+    { text: 'Excel crashed without saving', emoji: '📊' },
+    { text: 'Train delayed "few minutes"', emoji: '🚇' },
+    { text: 'Your ex liked your photo', emoji: '📸' },
+    { text: '499 Slack notifications', emoji: '🔔' },
+  ];
+
+  const REAL_SITUATIONS = [
+    { text: 'FINAL BOARDING CALL', emoji: '✈️' },
+    { text: 'Laptop on fire', emoji: '🔥' },
+    { text: 'Bus is leaving NOW', emoji: '🚌' },
+    { text: 'Your turn to present', emoji: '🎤' },
+    { text: 'Object heading at your face', emoji: '💥' },
+    { text: 'Falling coffee cup', emoji: '☕' },
+    { text: 'Door closing — RUN', emoji: '🚪' },
+    { text: 'Ball coming at you', emoji: '⚽' },
+    { text: 'Someone pushed you', emoji: '🫸' },
+    { text: 'Catch your phone!', emoji: '📱' },
+    { text: 'Dodge the bird!', emoji: '🐦' },
+    { text: 'Hot soup tipping over', emoji: '🍜' },
+  ];
+
+  // FUNNY MESSAGES: unnecessary reactions (tapped a fake or empty space)
+  const UNNECESSARY_REACTIONS = [
+    'That was nothing.',
+    'Calm down.',
+    'Bro. It was a Slack notification.',
+    'Posby does not flinch.',
+    'You panicked at a printer.',
+    'Relax. The WiFi will come back.',
+    'That did not require a tap.',
+    'Lunch theft is not an emergency.',
+    'You just got ratio\'d by your own reflexes.',
+    'Unnecessary.',
+    'HR can wait.',
+    'The parking spot is gone. Let it go.',
+    'It\'s just a group chat.',
+    'That was a vibe check, not a threat.',
+    'You flinched. Posby didn\'t.',
+    'Boss said "quick call" not "emergency."',
+    'Netflix buffer is not a crisis.',
+    '499 Slack notifs. Not a single one mattered.',
+  ];
+
+  // FUNNY MESSAGES: missed real situations (red reached Posby)
+  const MISSED_REAL = [
+    'That one was real. Oops.',
+    'The bus left without you.',
+    'Your laptop is still on fire.',
+    'Posby took the hit.',
+    'You had ONE job.',
+    'The soup got everywhere.',
+    'That bird did not dodge itself.',
+    'Boarding call: missed.',
+    'Your phone is now shattered.',
+    'The door closed. You\'re still here.',
+    'The ball hit. You didn\'t move.',
+    'Should have tapped that one.',
+  ];
+
+  const GAMEOVER_LINES = {
+    good: [
+      'Life happened. You stood there.',
+      'Composure level: legendary.',
+      'Posby would be proud.',
+      'Noted.',
+      'Hands behind back. Always.',
+      'You survived the chaos with dignity.',
+      'Life is the comedian. You were the audience.',
+      'Fine.',
+      'Still here.',
+    ],
+    mid: [
+      'Room for improvement.',
+      'You tried. Sort of.',
+      'Posby has concerns.',
+      'Almost unbothered.',
+      'The composure is developing.',
+    ],
+    bad: [
+      'Posby is disappointed.',
+      'You flinched at everything.',
+      'Deep breaths. Try again.',
+      'Composure was not found.',
+      'That was... reactive.',
+    ]
+  };
+
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // STREAK DISPLAY
+  function updateStreakDisplay() {
+    streakDisplay.textContent = '×' + streak;
+    if (streak >= 20) {
+      streakDisplay.style.color = '#f88';
+    } else if (streak >= 10) {
+      streakDisplay.style.color = '#c4a882';
+    } else if (streak >= 5) {
+      streakDisplay.style.color = '#aa8';
+    } else {
+      streakDisplay.style.color = '#666';
+    }
+  }
+
+  function checkStreakMilestone() {
+    if (streak === 5 || streak === 10 || streak === 20) {
+      showStreakPopup('×' + streak + ' UNBOTHERED');
+      streakDisplay.classList.add('milestone');
+      setTimeout(() => streakDisplay.classList.remove('milestone'), 600);
+    }
+    // Ongoing ×20+ flashes every 10
+    if (streak > 20 && streak % 10 === 0) {
+      showStreakPopup('×' + streak + ' UNBOTHERED');
+      streakDisplay.classList.add('milestone');
+      setTimeout(() => streakDisplay.classList.remove('milestone'), 600);
+    }
+  }
+
+  function showStreakPopup(text) {
+    const el = document.createElement('div');
+    el.className = 'streak-popup';
+    el.textContent = text;
+    game.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+  }
+
+  function resetStreak() {
+    streak = 0;
+    updateStreakDisplay();
+  }
+
+  // TEACHING MESSAGE
+  function showTeach(text, isRed) {
+    const el = document.createElement('div');
+    el.className = 'teach-msg' + (isRed ? ' red-msg' : '');
+    el.textContent = text;
+    game.appendChild(el);
+    setTimeout(() => {
+      el.style.transition = 'opacity 0.4s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 400);
+    }, 2000);
+  }
+
+  // SPAWN SITUATION
+  function spawnSituation() {
+    const phase = elapsed < 10 ? 0 : elapsed < 25 ? 1 : elapsed < 40 ? 2 : 3;
+    const realChance = phase === 0 ? 0.05 : phase === 1 ? 0.15 : phase === 2 ? 0.25 : 0.35;
+    const isReal = Math.random() < realChance;
+    const data = isReal ? pick(REAL_SITUATIONS) : pick(FAKE_SITUATIONS);
+
+    const el = document.createElement('div');
+    el.className = 'situation ' + (isReal ? 'real' : 'fake');
+    el.textContent = data.emoji + ' ' + data.text;
+
+    // Spawn from edges
+    const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let x, y, tx, ty;
+
+    // Target: center area where Posby is
+    const cx = vw / 2;
+    const cy = vh * 0.7;
+
+    switch (side) {
+      case 0: x = rand(10, vw - 10); y = -50; break;
+      case 1: x = vw + 50; y = rand(10, vh - 10); break;
+      case 2: x = rand(10, vw - 10); y = vh + 50; break;
+      case 3: x = -50; y = rand(10, vh - 10); break;
+    }
+
+    // Target slightly offset from center so they don't all stack
+    tx = cx + rand(-80, 80);
+    ty = cy + rand(-60, 20);
+
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+
+    const speed = Math.max(0.4, 1 - elapsed * 0.012); // faster over time
+    const duration = rand(1.5, 3) * speed;
+
+    game.appendChild(el);
+
+    const sit = {
+      el: el,
+      isReal: isReal,
+      data: data,
+      x: x, y: y,
+      tx: tx, ty: ty,
+      startX: x, startY: y,
+      progress: 0,
+      duration: duration,
+      active: true,
+      resolved: false,
+    };
+
+    situations.push(sit);
+
+    // First-game teaching messages
+    if (isFirstGame) {
+      if (!isReal && !taughtFake) {
+        taughtFake = true;
+        showTeach("Don't tap. Posby doesn't care.", false);
+      } else if (isReal && !taughtReal) {
+        taughtReal = true;
+        showTeach('This one matters. TAP IT.', true);
+      }
+    }
+  }
+
+  // FEEDBACK POPUP
+  function showFeedback(text, good, x, y) {
+    const el = document.createElement('div');
+    el.className = 'feedback ' + (good ? 'good' : 'bad');
+    el.textContent = text;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    game.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+
+  // CONTEXTUAL MESSAGE (floating, different from feedback)
+  function showContextMsg(text, x, y) {
+    const el = document.createElement('div');
+    el.className = 'feedback';
+    el.style.color = '#777';
+    el.style.fontSize = '13px';
+    el.style.fontWeight = '500';
+    el.style.fontStyle = 'italic';
+    el.textContent = text;
+    el.style.left = x + 'px';
+    el.style.top = (y + 30) + 'px';
+    game.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+  }
+
+  // UPDATE HUD
+  function updateHUD() {
+    composureEl.textContent = Math.floor(composure);
+    calmEl.textContent = Math.floor(calm) + '%';
+    calmBar.style.width = calm + '%';
+    calmBar.style.background = calm > 50 ? '#c4a882' : calm > 25 ? '#c88' : '#c44';
+    updateStreakDisplay();
+  }
+
+  // GAME LOOP
+  function gameLoop(time) {
+    if (!running) return;
+
+    if (!lastTime) lastTime = time;
+    const dt = (time - lastTime) / 1000;
+    lastTime = time;
+
+    elapsed = (time - startTime) / 1000;
+
+    // Spawn rate increases over time
+    const spawnInterval = Math.max(0.6, 2 - elapsed * 0.035);
+    spawnTimer += dt;
+    if (spawnTimer >= spawnInterval) {
+      spawnTimer = 0;
+      spawnSituation();
+    }
+
+    // Passive composure gain (standing still = composure)
+    composure += dt * 5 * (1 + elapsed * 0.05);
+
+    // Update situations
+    for (let i = situations.length - 1; i >= 0; i--) {
+      const sit = situations[i];
+      if (!sit.active) {
+        situations.splice(i, 1);
+        continue;
+      }
+
+      sit.progress += dt / sit.duration;
+
+      // Ease out movement
+      const t = Math.min(1, sit.progress);
+      const ease = 1 - (1 - t) * (1 - t);
+      const cx = sit.startX + (sit.tx - sit.startX) * ease;
+      const cy = sit.startY + (sit.ty - sit.startY) * ease;
+      sit.el.style.left = cx + 'px';
+      sit.el.style.top = cy + 'px';
+      sit.x = cx;
+      sit.y = cy;
+
+      // Reached Posby
+      if (sit.progress >= 1 && !sit.resolved) {
+        sit.resolved = true;
+        if (sit.isReal) {
+          // Real threat reached Posby — bad
+          calm -= 15;
+          panics++;
+          showFeedback('-15 calm', false, sit.x, sit.y);
+          showContextMsg(pick(MISSED_REAL), sit.x, sit.y);
+          resetStreak();
+        } else {
+          // Fake threat reached Posby — good, you didn't react
+          composure += 20;
+          streak++;
+          if (streak > bestStreak) bestStreak = streak;
+          showFeedback('+20', true, sit.x, sit.y);
+          checkStreakMilestone();
+        }
+        sit.el.style.opacity = '0';
+        sit.el.style.transition = 'opacity 0.3s';
+        setTimeout(() => {
+          sit.el.remove();
+          sit.active = false;
+        }, 300);
+      }
+
+      // Clean up off-screen or old
+      if (sit.progress > 1.5) {
+        sit.el.remove();
+        sit.active = false;
+      }
+    }
+
+    updateHUD();
+
+    // Check game over
+    if (calm <= 0) {
+      calm = 0;
+      gameOver();
+      return;
+    }
+
+    animFrame = requestAnimationFrame(gameLoop);
+  }
+
+  // PLAYER TAP
+  function handleTap(e) {
+    if (!running) return;
+    e.preventDefault();
+
+    const tapX = e.clientX || (e.touches && e.touches[0].clientX);
+    const tapY = e.clientY || (e.touches && e.touches[0].clientY);
+
+    // Check if tap was near any situation
+    let hitReal = false;
+    let hitFake = false;
+    let hitSit = null;
+
+    for (const sit of situations) {
+      if (!sit.active || sit.resolved) continue;
+      const dx = tapX - sit.x;
+      const dy = tapY - sit.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 120) {
+        hitSit = sit;
+        if (sit.isReal) {
+          hitReal = true;
+        } else {
+          hitFake = true;
+        }
+        break;
+      }
+    }
+
+    if (hitSit) {
+      hitSit.resolved = true;
+      hitSit.el.style.opacity = '0';
+      hitSit.el.style.transition = 'opacity 0.2s';
+      setTimeout(() => {
+        hitSit.el.remove();
+        hitSit.active = false;
+      }, 200);
+
+      if (hitReal) {
+        composure += 30;
+        streak++;
+        if (streak > bestStreak) bestStreak = streak;
+        showFeedback('+30', true, hitSit.x, hitSit.y);
+        checkStreakMilestone();
+      } else {
+        calm -= 10;
+        mistakes++;
+        showFeedback('-10 calm', false, hitSit.x, hitSit.y);
+        showContextMsg(pick(UNNECESSARY_REACTIONS), hitSit.x, hitSit.y);
+        resetStreak();
+      }
+    } else {
+      // Tapped empty space — unnecessary reaction
+      calm -= 3;
+      mistakes++;
+      showFeedback('-3 calm', false, tapX, tapY);
+      showContextMsg(pick(UNNECESSARY_REACTIONS), tapX, tapY);
+      resetStreak();
+    }
+
+    updateHUD();
+  }
+
+  // GET JUDGMENT LINE
+  function getJudgmentLine(score) {
+    if (score >= 500 && mistakes <= 2 && panics <= 1) {
+      return pick(GAMEOVER_LINES.good);
+    } else if (mistakes + panics >= 8) {
+      return pick(GAMEOVER_LINES.bad);
+    } else {
+      return pick(GAMEOVER_LINES.mid);
+    }
+  }
+
+  // START GAME
+  function startGame() {
+    composure = 0;
+    calm = 100;
+    running = true;
+    startTime = performance.now();
+    elapsed = 0;
+    spawnTimer = 0;
+    lastTime = 0;
+    situations = [];
+    taughtFake = false;
+    taughtReal = false;
+    streak = 0;
+    bestStreak = 0;
+    mistakes = 0;
+    panics = 0;
+
+    // Clear old situations and popups
+    document.querySelectorAll('.situation').forEach(el => el.remove());
+    document.querySelectorAll('.feedback').forEach(el => el.remove());
+    document.querySelectorAll('.streak-popup').forEach(el => el.remove());
+
+    startScreen.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+    hud.classList.remove('hidden');
+    posbyWrap.classList.remove('hidden');
+
+    updateHUD();
+    animFrame = requestAnimationFrame(gameLoop);
+  }
+
+  // GAME OVER
+  function gameOver() {
+    running = false;
+    if (animFrame) cancelAnimationFrame(animFrame);
+
+    // Mark first game as played
+    if (isFirstGame) {
+      localStorage.setItem('posby_played', '1');
+      isFirstGame = false;
+    }
+
+    const timeStr = Math.floor(elapsed) + 's';
+    const score = Math.floor(composure);
+
+    // Personal best
+    let best = parseInt(localStorage.getItem('posby_best') || '0');
+    if (score > best) {
+      best = score;
+      localStorage.setItem('posby_best', best);
+    }
+
+    finalComposure.textContent = score;
+    bestComposure.textContent = best;
+    survivalTime.textContent = timeStr;
+
+    // Mistakes/panics line
+    const totalIssues = mistakes + panics;
+    let issuesText = '';
+    if (totalIssues === 0) {
+      issuesText = 'Zero mistakes. Zero panics. Perfect.';
+    } else {
+      const parts = [];
+      if (mistakes > 0) parts.push(mistakes + ' mistake' + (mistakes > 1 ? 's' : ''));
+      if (panics > 0) parts.push(panics + ' panic' + (panics > 1 ? 's' : ''));
+      issuesText = parts.join(' · ');
+      if (bestStreak >= 5) {
+        issuesText += ' · Best streak: ×' + bestStreak;
+      }
+    }
+    mistakesLine.textContent = issuesText;
+
+    // Judgment line based on performance
+    gameoverLine.textContent = getJudgmentLine(score);
+
+    hud.classList.add('hidden');
+    posbyWrap.classList.add('hidden');
+    gameoverScreen.classList.remove('hidden');
+
+    // Store run stats for share button
+    shareBtn.dataset.time = timeStr;
+    shareBtn.dataset.score = score;
+    shareBtn.dataset.streak = bestStreak;
+  }
+
+  // EVENTS
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', startGame);
+
+  shareBtn.addEventListener('click', function() {
+    const time = shareBtn.dataset.time || '0s';
+    const score = shareBtn.dataset.score || '0';
+    const streak = shareBtn.dataset.streak || '0';
+    const text = 'I survived ' + time + ' with ' + score + ' COMPOSURE and a \u00d7' + streak + ' UNBOTHERED streak.\n\nHands behind back. Always.\n\nhttps://posby.world/game/\n\n#POSBY';
+    window.open('https://x.com/intent/post?text=' + encodeURIComponent(text), '_blank');
+  });
+
+  game.addEventListener('click', handleTap);
+  game.addEventListener('touchstart', function(e) {
+    if (running) {
+      e.preventDefault();
+      handleTap({
+        clientX: e.touches[0].clientX,
+        clientY: e.touches[0].clientY,
+        preventDefault: function() {}
+      });
+    }
+  }, { passive: false });
+})();
+</script>
+
+</body>
+</html>
